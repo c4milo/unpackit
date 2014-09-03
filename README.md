@@ -1,5 +1,5 @@
-# UnzipIt for Go
-This library allows you to easily unpack:
+# UnzipIt
+This Go library allows you to easily unpack:
 
 * tar.gz
 * tar.bzip2
