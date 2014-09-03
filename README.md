@@ -1,10 +1,10 @@
 # UnzipIt
-This Go library allows you to easily unpack:
+This Go library allows you to easily unpack the following files:
 
 * tar.gz
 * tar.bzip2
 * zip 
-* tar files.
+* tar
 
 There are not CGO involved nor hard dependencies of any type.
 
