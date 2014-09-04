@@ -12,6 +12,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 var (
@@ -115,7 +117,7 @@ func Unpack(file *os.File, destPath string) (string, error) {
 	}
 
 	// If it's not a TAR archive then save it to disk as is.
-	destRawFile := filepath.Join(destPath, path.Base(file.Name()))
+	destRawFile := filepath.Join(destPath, sanitize(path.Base(file.Name())))
 
 	// Creates destination file
 	destFile, err := os.Create(destRawFile)
@@ -173,7 +175,7 @@ func Unzip(file *os.File, destPath string) (string, error) {
 		}
 		defer rc.Close()
 
-		file, err := os.Create(filepath.Join(destPath, f.Name))
+		file, err := os.Create(filepath.Join(destPath, sanitize(f.Name)))
 		if err != nil {
 			return "", err
 		}
@@ -208,7 +210,7 @@ func Untar(data io.Reader, destPath string) (string, error) {
 		}
 
 		if hdr.FileInfo().IsDir() {
-			d := filepath.Join(destPath, hdr.Name)
+			d := filepath.Join(destPath, sanitize(hdr.Name))
 			if rootdir == destPath {
 				rootdir = d
 			}
@@ -216,7 +218,7 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			continue
 		}
 
-		file, err := os.Create(filepath.Join(destPath, hdr.Name))
+		file, err := os.Create(filepath.Join(destPath, sanitize(hdr.Name)))
 		if err != nil {
 			return rootdir, err
 		}
@@ -228,4 +230,16 @@ func Untar(data io.Reader, destPath string) (string, error) {
 	}
 
 	return rootdir, nil
+}
+
+// Sanitizes name to avoid overwriting sensitive system files when unarchiving
+func sanitize(name string) string {
+	// Gets rid of volume drive label in Windows
+	if len(name) > 1 && name[1] == ':' && runtime.GOOS == "windows" {
+		name = name[2:]
+	}
+
+	name = filepath.ToSlash(name)
+	name = strings.TrimLeft(name, "/.")
+	return strings.Replace(name, "../", "", -1)
 }

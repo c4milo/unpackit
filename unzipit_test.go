@@ -50,6 +50,7 @@ func TestUnpack(t *testing.T) {
 		{"./fixtures/test.zip", 2},
 		{"./fixtures/test.tar", 2},
 		{"./fixtures/cfgdrv.iso", 1},
+		{"./fixtures/test2.tar.gz", 4},
 	}
 
 	for _, test := range tests {
@@ -135,4 +136,21 @@ func TestUntar(t *testing.T) {
 
 	_, err = Untar(r, destDir)
 	ok(t, err)
+}
+
+func TestSanitize(t *testing.T) {
+	var tests = []struct {
+		malicious string
+		sanitized string
+	}{
+		{"./../../etc/passwd", "etc/passwd"},
+		{"../../etc/passwd", "etc/passwd"},
+		{"/tmp/../../../../etc/passwd", "tmp/etc/passwd"},
+	}
+
+	for _, test := range tests {
+		a := sanitize(test.malicious)
+		msg := fmt.Sprintf("%s != %s for malicious string %s", a, test.sanitized, test.malicious)
+		assert(t, a == test.sanitized, msg)
+	}
 }
