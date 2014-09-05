@@ -241,5 +241,8 @@ func sanitize(name string) string {
 
 	name = filepath.Clean(name)
 	name = filepath.ToSlash(name)
-	return strings.TrimLeft(name, "../")
+	for strings.HasPrefix(name, "../") {
+		name = name[3:]
+	}
+	return name
 }

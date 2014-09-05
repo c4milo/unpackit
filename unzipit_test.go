@@ -151,6 +151,7 @@ func TestSanitize(t *testing.T) {
 		{"abc../def", "abc../def"},
 		{"a/b/c/../d", "a/b/d"},
 		{"a/../../c", "c"},
+		{"...../etc/password", "...../etc/password"},
 	}
 
 	for _, test := range tests {
