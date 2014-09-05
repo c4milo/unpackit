@@ -1,4 +1,6 @@
 # UnzipIt
+[![GoDoc](https://godoc.org/github.com/c4milo/unzipit?status.svg)](https://godoc.org/github.com/c4milo/unzipit)
+
 This Go library allows you to easily unpack the following files:
 
 * tar.gz
