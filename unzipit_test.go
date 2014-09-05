@@ -143,9 +143,14 @@ func TestSanitize(t *testing.T) {
 		malicious string
 		sanitized string
 	}{
-		{"./../../etc/passwd", "etc/passwd"},
+		{"../../.././etc/passwd", "etc/passwd"},
 		{"../../etc/passwd", "etc/passwd"},
-		{"/tmp/../../../../etc/passwd", "tmp/etc/passwd"},
+		{"./etc/passwd", "etc/passwd"},
+		{"./././etc/passwd", "etc/passwd"},
+		{"nonexistant/b/../file.txt", "nonexistant/file.txt"},
+		{"abc../def", "abc../def"},
+		{"a/b/c/../d", "a/b/d"},
+		{"a/../../c", "c"},
 	}
 
 	for _, test := range tests {

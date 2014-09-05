@@ -239,7 +239,7 @@ func sanitize(name string) string {
 		name = name[2:]
 	}
 
+	name = filepath.Clean(name)
 	name = filepath.ToSlash(name)
-	name = strings.TrimLeft(name, "/.")
-	return strings.Replace(name, "../", "", -1)
+	return strings.TrimLeft(name, "../")
 }
