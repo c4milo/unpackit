@@ -54,6 +54,7 @@ func TestUnpack(t *testing.T) {
 		{"./fixtures/test.tar", 2},
 		{"./fixtures/cfgdrv.iso", 1},
 		{"./fixtures/test2.tar.gz", 4},
+		{"./fixtures/tar-without-directory-entries.tar.gz", 1},
 	}
 
 	for _, test := range tests {
