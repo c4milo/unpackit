@@ -5,6 +5,7 @@ package unzipit
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -77,10 +78,43 @@ func TestUnpack(t *testing.T) {
 	}
 }
 
+func TestUnpackStream(t *testing.T) {
+	var tests = []struct {
+		filepath string
+		files    int
+	}{
+		{"./fixtures/test.tar.bzip2", 2},
+		{"./fixtures/test.tar.gz", 2},
+		{"./fixtures/test.zip", 2},
+		{"./fixtures/test.tar", 2},
+		{"./fixtures/cfgdrv.iso", 1},
+		{"./fixtures/test2.tar.gz", 4},
+	}
+
+	for _, test := range tests {
+		tempDir, err := ioutil.TempDir(os.TempDir(), "unpackit-tests-"+path.Base(test.filepath)+"-")
+		ok(t, err)
+		defer os.RemoveAll(tempDir)
+
+		file, err := os.Open(test.filepath)
+		ok(t, err)
+		defer file.Close()
+
+		destPath, err := UnpackStream(bufio.NewReader(file), tempDir)
+		ok(t, err)
+
+		finfo, err := ioutil.ReadDir(destPath)
+		ok(t, err)
+
+		length := len(finfo)
+		assert(t, length == test.files, fmt.Sprintf("%d != %d for %s", length, test.files, destPath))
+	}
+}
+
 func TestMagicNumber(t *testing.T) {
 	var tests = []struct {
 		filepath string
-		offset   int64
+		offset   int
 		ftype    string
 	}{
 		{"./fixtures/test.tar.bzip2", 0, "bzip"},
@@ -93,7 +127,7 @@ func TestMagicNumber(t *testing.T) {
 		file, err := os.Open(test.filepath)
 		ok(t, err)
 
-		ftype, err := magicNumber(file, test.offset)
+		ftype, err := magicNumber(bufio.NewReader(file), test.offset)
 		file.Close()
 		ok(t, err)
 
