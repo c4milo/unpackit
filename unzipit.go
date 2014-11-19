@@ -179,7 +179,9 @@ func Gunzip(file *os.File) (*bufio.Reader, error) {
 
 // GunzipStream unpacks a gzipped stream
 func GunzipStream(reader io.Reader) (*bufio.Reader, error) {
-	if decompressingReader, err := gzip.NewReader(reader); err != nil {
+	var decompressingReader *gzip.Reader
+	var err error
+	if decompressingReader, err = gzip.NewReader(reader); err != nil {
 		return nil, err
 	}
 
