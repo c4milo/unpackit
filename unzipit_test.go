@@ -52,6 +52,7 @@ func TestUnpack(t *testing.T) {
 		{"./fixtures/test.tar.bzip2", 2},
 		{"./fixtures/test.tar.gz", 2},
 		{"./fixtures/test.zip", 2},
+		{"./fixtures/filetest.zip", 3},
 		{"./fixtures/test.tar", 2},
 		{"./fixtures/cfgdrv.iso", 1},
 		{"./fixtures/test2.tar.gz", 4},
@@ -70,10 +71,7 @@ func TestUnpack(t *testing.T) {
 		destPath, err := Unpack(file, tempDir)
 		ok(t, err)
 
-		finfo, err := ioutil.ReadDir(destPath)
-		ok(t, err)
-
-		length := len(finfo)
+		length := calcNumberOfFiles(t, destPath)
 		assert(t, length == test.files, fmt.Sprintf("%d != %d for %s", length, test.files, destPath))
 	}
 }
@@ -197,4 +195,21 @@ func TestSanitize(t *testing.T) {
 		msg := fmt.Sprintf("%s != %s for malicious string %s", a, test.sanitized, test.malicious)
 		assert(t, a == test.sanitized, msg)
 	}
+}
+
+func calcNumberOfFiles(t *testing.T, searchDir string) int {
+	fileList := []string{}
+
+	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+			if !f.IsDir() {
+				fileList = append(fileList, path)
+			}
+			return nil
+		})
+
+	if err != nil {
+		t.FailNow()
+	}
+
+	return len(fileList)
 }

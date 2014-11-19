@@ -226,15 +226,23 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		}
 		defer rc.Close()
 
-		file, err := os.Create(filepath.Join(destPath, sanitize(f.Name)))
+		filePath := sanitize(f.Name)
+		sepInd := strings.LastIndex(filePath, string(os.PathSeparator))
+
+		if sepInd > -1 {
+			directory := filePath[0:sepInd]
+			os.MkdirAll(filepath.Join(destPath, directory), 0740)
+		}
+
+		file, err := os.Create(filepath.Join(destPath, filePath))
 		if err != nil {
 			return "", err
 		}
 		defer file.Close()
 
-		if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
-			return "", err
-		}
+        if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
+            return "", err
+        }
 		defer rc.Close()
 	}
 	return destPath, nil
