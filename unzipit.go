@@ -1,6 +1,9 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+// Package unzipit allows you to easily unpack *.tar.gz, *.tar.bzip2, *.zip and *.tar files.
+// There are not CGO involved nor hard dependencies of any type.
 package unzipit
 
 import (
@@ -21,10 +24,10 @@ import (
 )
 
 var (
-	magicZIP  []byte = []byte{0x50, 0x4b, 0x03, 0x04}
-	magicGZ   []byte = []byte{0x1f, 0x8b}
-	magicBZIP []byte = []byte{0x42, 0x5a}
-	magicTAR  []byte = []byte{0x75, 0x73, 0x74, 0x61, 0x72} // at offset 257
+	magicZIP  = []byte{0x50, 0x4b, 0x03, 0x04}
+	magicGZ   = []byte{0x1f, 0x8b}
+	magicBZIP = []byte{0x42, 0x5a}
+	magicTAR  = []byte{0x75, 0x73, 0x74, 0x61, 0x72} // at offset 257
 )
 
 // Check whether a file has the magic number for tar, gzip, bzip2 or zip files
@@ -60,7 +63,7 @@ func magicNumber(reader *bufio.Reader, offset int) (string, error) {
 	return "", nil
 }
 
-// Unpacks a compressed and archived file and places result output in destination
+// Unpack unpacks a compressed and archived file and places result output in destination
 // path.
 //
 // File formats supported are:
@@ -147,7 +150,7 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	return destPath, nil
 }
 
-// Decompresses a bzip2 file and returns the decompressed stream
+// Bunzip2 decompresses a bzip2 file and returns the decompressed stream
 func Bunzip2(file *os.File) (*bufio.Reader, error) {
 	freader := bufio.NewReader(file)
 	bzip2Reader, err := Bunzip2Stream(freader)
@@ -163,7 +166,7 @@ func Bunzip2Stream(reader io.Reader) (*bufio.Reader, error) {
 	return bufio.NewReader(bzip2.NewReader(reader)), nil
 }
 
-// Decompresses a gzip file and returns the decompressed stream
+// Gunzip decompresses a gzip file and returns the decompressed stream
 func Gunzip(file *os.File) (*bufio.Reader, error) {
 	freader := bufio.NewReader(file)
 	gunzipReader, err := GunzipStream(freader)
@@ -178,12 +181,12 @@ func Gunzip(file *os.File) (*bufio.Reader, error) {
 func GunzipStream(reader io.Reader) (*bufio.Reader, error) {
 	if decompressingReader, err := gzip.NewReader(reader); err != nil {
 		return nil, err
-	} else {
-		return bufio.NewReader(decompressingReader), nil
 	}
+
+	return bufio.NewReader(decompressingReader), nil
 }
 
-// Decompresses and unarchives a ZIP archive, returning the final path or an error
+// Unzip decompresses and unarchives a ZIP archive, returning the final path or an error
 func Unzip(file *os.File, destPath string) (string, error) {
 	fstat, err := file.Stat()
 	if err != nil {
@@ -240,7 +243,7 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 	return destPath, nil
 }
 
-// Unarchives a TAR archive and returns the final destination path or an error
+// Untar unarchives a TAR archive and returns the final destination path or an error
 func Untar(data io.Reader, destPath string) (string, error) {
 	// Makes sure destPath exists
 	os.MkdirAll(destPath, 0740)
