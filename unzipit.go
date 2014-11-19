@@ -224,6 +224,7 @@ func UnzipStream(r io.Reader, destPath string) (string, error) {
 func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 	// Iterate through the files in the archive,
 	// printing some of their contents.
+	pathSeparator := string(os.PathSeparator)
 	for _, f := range zr.File {
 		rc, err := f.Open()
 		if err != nil {
@@ -232,8 +233,10 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		defer rc.Close()
 
 		filePath := sanitize(f.Name)
-		sepInd := strings.LastIndex(filePath, string(os.PathSeparator))
+		sepInd := strings.LastIndex(filePath, pathSeparator)
 
+		// If the file is a subdirectory, it creates it before attempting to
+		// create the actual file
 		if sepInd > -1 {
 			directory := filePath[0:sepInd]
 			os.MkdirAll(filepath.Join(destPath, directory), 0740)
@@ -245,9 +248,9 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		}
 		defer file.Close()
 
-        if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
-            return "", err
-        }
+		if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
+			return "", err
+		}
 		defer rc.Close()
 	}
 	return destPath, nil
