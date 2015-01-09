@@ -206,14 +206,13 @@ func Unzip(file *os.File, destPath string) (string, error) {
 // UnzipStream unpacks a ZIP stream. Because of the nature of the ZIP format,
 // the stream is copied to memory before decompression.
 func UnzipStream(r io.Reader, destPath string) (string, error) {
-	memoryBuffer := new(bytes.Buffer)
-	_, err := io.Copy(memoryBuffer, r)
+	data, err := ioutil.ReadAll(r)
 	if err != nil {
 		return "", err
 	}
 
-	memReader := bytes.NewReader(memoryBuffer.Bytes())
-	zr, err := zip.NewReader(memReader, int64(memoryBuffer.Len()))
+	memReader := bytes.NewReader(data)
+	zr, err := zip.NewReader(memReader, int64(len(data)))
 	if err != nil {
 		return "", err
 	}
