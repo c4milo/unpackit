@@ -238,7 +238,13 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		// create the actual file
 		if sepInd > -1 {
 			directory := filePath[0:sepInd]
-			os.MkdirAll(filepath.Join(destPath, directory), 0740)
+			if err := os.MkdirAll(filepath.Join(destPath, directory), 0740); err != nil {
+				return "", err
+			}
+			// if the path is a directory,we should contine, or we will create a file instead of a directory
+			if sepInd == len(filePath)-1 {
+				continue
+			}
 		}
 
 		file, err := os.Create(filepath.Join(destPath, filePath))
@@ -313,8 +319,9 @@ func sanitize(name string) string {
 	if len(name) > 1 && name[1] == ':' && runtime.GOOS == "windows" {
 		name = name[2:]
 	}
-
-	name = filepath.Clean(name)
+	//Clean will trim the last "/"" wrong,for example, if the name is like db/,clean change it to db
+	//And this makes a directory to file in next step
+	// name = filepath.Clean(name)
 	name = filepath.ToSlash(name)
 	for strings.HasPrefix(name, "../") {
 		name = name[3:]
