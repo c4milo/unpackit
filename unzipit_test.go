@@ -44,19 +44,6 @@ func equals(tb testing.TB, exp, act interface{}) {
 	}
 }
 
-// func TestUnpackZip(t *testing.T) {
-// 	// file, err := os.Open("./fixtures/filetest.zip")
-// 	file, err := os.Open("./fixtures/testfolder.zip")
-// 	ok(t, err)
-
-// 	destPath, err := Unpack(file, "./db/")
-// 	ok(t, err)
-// 	fmt.Println(destPath)
-// 	length := calcNumberOfFiles(t, destPath)
-// 	assert(t, length == 3, fmt.Sprintf("%d != %d for %s", length, 3, destPath))
-
-// }
-
 func TestUnpack(t *testing.T) {
 	var tests = []struct {
 		filepath string
@@ -81,7 +68,6 @@ func TestUnpack(t *testing.T) {
 		file, err := os.Open(test.filepath)
 		ok(t, err)
 		defer file.Close()
-		fmt.Println(file.Name())
 		destPath, err := Unpack(file, tempDir)
 		ok(t, err)
 
