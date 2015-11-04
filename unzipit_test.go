@@ -53,6 +53,7 @@ func TestUnpack(t *testing.T) {
 		{"./fixtures/test.tar.gz", 2},
 		{"./fixtures/test.zip", 2},
 		{"./fixtures/filetest.zip", 3},
+		{"./fixtures/testfolder.zip", 3},
 		{"./fixtures/test.tar", 2},
 		{"./fixtures/cfgdrv.iso", 1},
 		{"./fixtures/test2.tar.gz", 4},
@@ -67,7 +68,6 @@ func TestUnpack(t *testing.T) {
 		file, err := os.Open(test.filepath)
 		ok(t, err)
 		defer file.Close()
-
 		destPath, err := Unpack(file, tempDir)
 		ok(t, err)
 
@@ -201,11 +201,11 @@ func calcNumberOfFiles(t *testing.T, searchDir string) int {
 	fileList := []string{}
 
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
-			if !f.IsDir() {
-				fileList = append(fileList, path)
-			}
-			return nil
-		})
+		if !f.IsDir() {
+			fileList = append(fileList, path)
+		}
+		return nil
+	})
 
 	if err != nil {
 		t.FailNow()

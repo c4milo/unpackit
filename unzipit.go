@@ -14,6 +14,7 @@ import (
 	"compress/bzip2"
 	"compress/gzip"
 	"errors"
+	// "fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -105,7 +106,6 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	var decompressingReader *bufio.Reader
 	switch ftype {
 	case "gzip":
@@ -125,7 +125,6 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	default:
 		decompressingReader = r
 	}
-
 	// Check magic number in offset 257 too see if this is also a TAR file
 	ftype, err = magicNumber(decompressingReader, 257)
 	if ftype == "tar" {
@@ -238,7 +237,13 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		// create the actual file
 		if sepInd > -1 {
 			directory := filePath[0:sepInd]
-			os.MkdirAll(filepath.Join(destPath, directory), 0740)
+			if err := os.MkdirAll(filepath.Join(destPath, directory), 0740); err != nil {
+				return "", err
+			}
+			// if the path is a directory,we should contine, or we will create a file instead of a directory
+			if sepInd == len(filePath)-1 {
+				continue
+			}
 		}
 
 		file, err := os.Create(filepath.Join(destPath, filePath))
@@ -259,7 +264,6 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 func Untar(data io.Reader, destPath string) (string, error) {
 	// Makes sure destPath exists
 	os.MkdirAll(destPath, 0740)
-
 	tr := tar.NewReader(data)
 
 	// Iterate through the files in the archive.
@@ -270,7 +274,6 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			// end of tar archive
 			break
 		}
-
 		if err != nil {
 			return rootdir, err
 		}
@@ -311,8 +314,14 @@ func sanitize(name string) string {
 	if len(name) > 1 && name[1] == ':' && runtime.GOOS == "windows" {
 		name = name[2:]
 	}
-
-	name = filepath.Clean(name)
+	//Clean will trim the last "/"" wrong,for example, if the name is like db/,clean change it to db
+	//And this makes a directory to file in next step
+	length := len(name)
+	if length > 2 && name[(length-1):] == "/" {
+	} else {
+		name = filepath.Clean(name)
+	}
+	// name = filepath.Clean(name)
 	name = filepath.ToSlash(name)
 	for strings.HasPrefix(name, "../") {
 		name = name[3:]
