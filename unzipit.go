@@ -16,6 +16,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -142,7 +143,7 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	}
 	defer func() {
 		if err := destFile.Close(); err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}()
 
@@ -235,7 +236,7 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		}
 		defer func() {
 			if err := rc.Close(); err != nil {
-				panic(err)
+				log.Println(err)
 			}
 		}()
 
@@ -255,7 +256,7 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		}
 		defer func() {
 			if err := file.Close(); err != nil {
-				panic(err)
+				log.Println(err)
 			}
 		}()
 
@@ -308,7 +309,7 @@ func Untar(data io.Reader, destPath string) (string, error) {
 
 		defer func() {
 			if err := file.Close(); err != nil {
-				panic(err)
+				log.Println(err)
 			}
 		}()
 
