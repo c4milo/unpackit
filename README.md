@@ -14,7 +14,8 @@ There are not CGO involved nor hard dependencies of any type.
 
 ## Usage
 Unpack a file:
-```
+
+```go
     file, err := os.Open(test.filepath)
     ok(t, err)
     defer file.Close()
@@ -23,7 +24,8 @@ Unpack a file:
 ```
 
 Unpack a stream (such as a http.Response):
-```
+
+```go
     res, err := http.Get(url)
     destPath, err := unzipit.UnpackStream(res.Body, tempDir)
 ```
