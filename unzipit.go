@@ -275,24 +275,22 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			return rootdir, err
 		}
 
+		fp := filepath.Join(destPath, sanitize(hdr.Name))
 		if hdr.FileInfo().IsDir() {
-			d := filepath.Join(destPath, sanitize(hdr.Name))
 			if rootdir == destPath {
-				rootdir = d
+				rootdir = fp
 			}
-			os.MkdirAll(d, os.FileMode(hdr.Mode))
+			os.MkdirAll(fp, os.FileMode(hdr.Mode))
 			continue
 		}
 
-		path := filepath.Join(destPath, sanitize(hdr.Name))
-		parentDir, _ := filepath.Split(path)
-
+		parentDir, _ := filepath.Split(fp)
 		err = os.MkdirAll(parentDir, 0740)
 		if err != nil {
 			return rootdir, err
 		}
 
-		file, err := os.Create(path)
+		file, err := os.Create(fp)
 		if err != nil {
 			return rootdir, err
 		}
