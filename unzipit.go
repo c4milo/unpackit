@@ -140,7 +140,11 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer destFile.Close()
+	defer func() {
+		if err := destFile.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	// Copies data to destination file
 	if _, err := io.Copy(destFile, decompressingReader); err != nil {
@@ -229,7 +233,11 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		defer rc.Close()
+		defer func() {
+			if err := rc.Close(); err != nil {
+				panic(err)
+			}
+		}()
 
 		filePath := sanitize(f.Name)
 		sepInd := strings.LastIndex(filePath, pathSeparator)
@@ -245,7 +253,11 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		defer file.Close()
+		defer func() {
+			if err := file.Close(); err != nil {
+				panic(err)
+			}
+		}()
 
 		if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
 			return "", err
@@ -294,7 +306,11 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			return rootdir, err
 		}
 
-		defer file.Close()
+		defer func() {
+			if err := file.Close(); err != nil {
+				panic(err)
+			}
+		}()
 
 		if _, err := io.Copy(file, tr); err != nil {
 			return rootdir, err
