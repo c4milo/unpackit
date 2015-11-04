@@ -250,7 +250,6 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
 			return "", err
 		}
-		defer rc.Close()
 	}
 	return destPath, nil
 }
