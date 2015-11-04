@@ -89,7 +89,9 @@ func Unpack(file *os.File, destPath string) (string, error) {
 	}
 
 	// Makes sure despPath exists
-	os.MkdirAll(destPath, 0740)
+	if err := os.MkdirAll(destPath, 0740); err != nil {
+		return "", err
+	}
 
 	r := bufio.NewReader(file)
 	return UnpackStream(r, destPath)
@@ -247,7 +249,9 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 		// create the actual file
 		if sepInd > -1 {
 			directory := filePath[0:sepInd]
-			os.MkdirAll(filepath.Join(destPath, directory), 0740)
+			if err := os.MkdirAll(filepath.Join(destPath, directory), 0740); err != nil {
+				return "", err
+			}
 		}
 
 		file, err := os.Create(filepath.Join(destPath, filePath))
@@ -270,7 +274,9 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 // Untar unarchives a TAR archive and returns the final destination path or an error
 func Untar(data io.Reader, destPath string) (string, error) {
 	// Makes sure destPath exists
-	os.MkdirAll(destPath, 0740)
+	if err := os.MkdirAll(destPath, 0740); err != nil {
+		return "", err
+	}
 
 	tr := tar.NewReader(data)
 
@@ -292,13 +298,14 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			if rootdir == destPath {
 				rootdir = fp
 			}
-			os.MkdirAll(fp, os.FileMode(hdr.Mode))
+			if err := os.MkdirAll(fp, os.FileMode(hdr.Mode)); err != nil {
+				return rootdir, err
+			}
 			continue
 		}
 
 		parentDir, _ := filepath.Split(fp)
-		err = os.MkdirAll(parentDir, 0740)
-		if err != nil {
+		if err := os.MkdirAll(parentDir, 0740); err != nil {
 			return rootdir, err
 		}
 
