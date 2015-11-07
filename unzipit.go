@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 var (
@@ -254,7 +255,7 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 			}
 		}
 
-		file, err := os.OpenFile(filepath.Join(destPath, filePath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, f.Mode())
+		file, err := os.Create(filepath.Join(destPath, filePath))
 		if err != nil {
 			return "", err
 		}
@@ -264,6 +265,9 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 				log.Println(err)
 			}
 		}()
+
+		file.Chmod(f.Mode())
+		os.Chtimes(file.Name(), time.Now(), f.ModTime())
 
 		if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
 			return "", err
@@ -320,7 +324,9 @@ func Untar(data io.Reader, destPath string) (string, error) {
 				log.Println(err)
 			}
 		}()
+
 		file.Chmod(os.FileMode(hdr.Mode))
+		os.Chtimes(file.Name(), time.Now(), hdr.ModTime)
 
 		if _, err := io.Copy(file, tr); err != nil {
 			return rootdir, err
