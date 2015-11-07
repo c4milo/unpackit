@@ -254,10 +254,11 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 			}
 		}
 
-		file, err := os.Create(filepath.Join(destPath, filePath))
+		file, err := os.OpenFile(filepath.Join(destPath, filePath), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, f.Mode())
 		if err != nil {
 			return "", err
 		}
+
 		defer func() {
 			if err := file.Close(); err != nil {
 				log.Println(err)
@@ -319,6 +320,7 @@ func Untar(data io.Reader, destPath string) (string, error) {
 				log.Println(err)
 			}
 		}()
+		file.Chmod(os.FileMode(hdr.Mode))
 
 		if _, err := io.Copy(file, tr); err != nil {
 			return rootdir, err
