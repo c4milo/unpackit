@@ -309,28 +309,38 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			continue
 		}
 
-		parentDir, _ := filepath.Split(fp)
-		if err := os.MkdirAll(parentDir, 0740); err != nil {
-			return rootdir, err
+		_, untarErr := untarFile(hdr, tr, fp, rootdir)
+		if untarErr != nil {
+			return rootdir, untarErr
 		}
+	}
 
-		file, err := os.Create(fp)
-		if err != nil {
-			return rootdir, err
+	return rootdir, nil
+}
+
+func untarFile(hdr *tar.Header, tr *tar.Reader, fp, rootdir string) (string, error) {
+	parentDir, _ := filepath.Split(fp)
+
+	if err := os.MkdirAll(parentDir, 0740); err != nil {
+		return rootdir, err
+	}
+
+	file, err := os.Create(fp)
+	if err != nil {
+		return rootdir, err
+	}
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Println(err)
 		}
+	}()
 
-		defer func() {
-			if err := file.Close(); err != nil {
-				log.Println(err)
-			}
-		}()
+	file.Chmod(os.FileMode(hdr.Mode))
+	os.Chtimes(file.Name(), time.Now(), hdr.ModTime)
 
-		file.Chmod(os.FileMode(hdr.Mode))
-		os.Chtimes(file.Name(), time.Now(), hdr.ModTime)
-
-		if _, err := io.Copy(file, tr); err != nil {
-			return rootdir, err
-		}
+	if _, err := io.Copy(file, tr); err != nil {
+		return rootdir, err
 	}
 
 	return rootdir, nil
