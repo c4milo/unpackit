@@ -5,6 +5,7 @@ package unzipit
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"fmt"
@@ -219,6 +220,50 @@ func TestUntarOpenFileResourceLeak(t *testing.T) {
 	defer os.RemoveAll(destDir)
 
 	_, err = Untar(r, destDir)
+	ok(t, err)
+}
+
+func TestUnzipOpenFileResourceLeak(t *testing.T) {
+	tempPath, err := ioutil.TempDir(os.TempDir(), "unzip-resource-leak-test")
+	ok(t, err)
+	defer os.RemoveAll(tempPath)
+
+	testFile, err := os.Create(filepath.Join(tempPath, "test.zip"))
+	ok(t, err)
+	defer testFile.Close()
+
+	zw := zip.NewWriter(testFile)
+
+	// Add some files to the archive.
+	var files = make([]struct {
+		Name, Body string
+	}, 2000)
+
+	for fileNum := range iter.N(2000) {
+		files[fileNum] = struct {
+			Name, Body string
+		}{
+			Name: fmt.Sprintf("file-%d.txt", fileNum),
+			Body: fmt.Sprintf("This is file number %d\n", fileNum),
+		}
+	}
+
+	for _, file := range files {
+		f, err := zw.Create(file.Name)
+		ok(t, err)
+
+		_, err = f.Write([]byte(file.Body))
+		ok(t, err)
+	}
+
+	// Make sure to check the error on Close.
+	err = zw.Close()
+	ok(t, err)
+
+	// Open the zip archive for reading.
+	destPath := filepath.Join(tempPath, "out")
+	os.MkdirAll(destPath, 0777)
+	_, err = Unzip(testFile, destPath)
 	ok(t, err)
 }
 
