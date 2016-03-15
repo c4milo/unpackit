@@ -229,51 +229,59 @@ func UnzipStream(r io.Reader, destPath string) (string, error) {
 }
 
 func unpackZip(zr *zip.Reader, destPath string) (string, error) {
-	// Iterate through the files in the archive,
-	// printing some of their contents.
-	pathSeparator := string(os.PathSeparator)
 	for _, f := range zr.File {
-		rc, err := f.Open()
+		err := unzipFile(f, destPath)
 		if err != nil {
-			return "", err
-		}
-		defer func() {
-			if err := rc.Close(); err != nil {
-				log.Println(err)
-			}
-		}()
-
-		filePath := sanitize(f.Name)
-		sepInd := strings.LastIndex(filePath, pathSeparator)
-
-		// If the file is a subdirectory, it creates it before attempting to
-		// create the actual file
-		if sepInd > -1 {
-			directory := filePath[0:sepInd]
-			if err := os.MkdirAll(filepath.Join(destPath, directory), 0740); err != nil {
-				return "", err
-			}
-		}
-
-		file, err := os.Create(filepath.Join(destPath, filePath))
-		if err != nil {
-			return "", err
-		}
-
-		defer func() {
-			if err := file.Close(); err != nil {
-				log.Println(err)
-			}
-		}()
-
-		file.Chmod(f.Mode())
-		os.Chtimes(file.Name(), time.Now(), f.ModTime())
-
-		if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
 			return "", err
 		}
 	}
 	return destPath, nil
+}
+
+func unzipFile(f *zip.File, destPath string) error {
+	pathSeparator := string(os.PathSeparator)
+
+	rc, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := rc.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+
+	filePath := sanitize(f.Name)
+	sepInd := strings.LastIndex(filePath, pathSeparator)
+
+	// If the file is a subdirectory, it creates it before attempting to
+	// create the actual file
+	if sepInd > -1 {
+		directory := filePath[0:sepInd]
+		if err := os.MkdirAll(filepath.Join(destPath, directory), 0740); err != nil {
+			return err
+		}
+	}
+
+	file, err := os.Create(filepath.Join(destPath, filePath))
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
+
+	file.Chmod(f.Mode())
+	os.Chtimes(file.Name(), time.Now(), f.ModTime())
+
+	if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Untar unarchives a TAR archive and returns the final destination path or an error
