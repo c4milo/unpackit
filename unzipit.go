@@ -298,6 +298,11 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			return rootdir, err
 		}
 
+		// Skip pax_global_header with the commit ID this archive was created from
+		if hdr.Name == "pax_global_header" {
+			continue
+		}
+
 		fp := filepath.Join(destPath, sanitize(hdr.Name))
 		if hdr.FileInfo().IsDir() {
 			if rootdir == destPath {
