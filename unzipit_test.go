@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
+
 	"github.com/bradfitz/iter"
 )
 
@@ -53,6 +54,7 @@ func TestUnpack(t *testing.T) {
 	}{
 		{"./fixtures/test.tar.bzip2", 2},
 		{"./fixtures/test.tar.gz", 2},
+		{"./fixtures/test.tar.xz", 2},
 		{"./fixtures/test.zip", 2},
 		{"./fixtures/filetest.zip", 3},
 		{"./fixtures/test.tar", 2},
@@ -85,6 +87,7 @@ func TestUnpackStream(t *testing.T) {
 	}{
 		{"./fixtures/test.tar.bzip2", 2},
 		{"./fixtures/test.tar.gz", 2},
+		{"./fixtures/test.tar.xz", 2},
 		{"./fixtures/test.zip", 2},
 		{"./fixtures/test.tar", 2},
 		{"./fixtures/cfgdrv.iso", 1},
@@ -119,6 +122,7 @@ func TestMagicNumber(t *testing.T) {
 	}{
 		{"./fixtures/test.tar.bzip2", 0, "bzip"},
 		{"./fixtures/test.tar.gz", 0, "gzip"},
+		{"./fixtures/test.tar.xz", 0, "xz"},
 		{"./fixtures/test.zip", 0, "zip"},
 		{"./fixtures/test.tar", 257, "tar"},
 	}
@@ -294,11 +298,11 @@ func calcNumberOfFiles(t *testing.T, searchDir string) int {
 	fileList := []string{}
 
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
-			if !f.IsDir() {
-				fileList = append(fileList, path)
-			}
-			return nil
-		})
+		if !f.IsDir() {
+			fileList = append(fileList, path)
+		}
+		return nil
+	})
 
 	if err != nil {
 		t.FailNow()
