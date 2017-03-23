@@ -313,8 +313,13 @@ func unzipFile(f *zip.File, destPath string) error {
 		}
 	}()
 
-	file.Chmod(f.Mode())
-	os.Chtimes(file.Name(), time.Now(), f.ModTime())
+	if err := file.Chmod(f.Mode()); err != nil {
+		log.Printf("warn: failed setting file permissions for %q: %#v", file.Name(), err)
+	}
+
+	if err := os.Chtimes(file.Name(), time.Now(), f.ModTime()); err != nil {
+		log.Printf("warn: failed setting file atime and mtime for %q: %#v", file.Name(), err)
+	}
 
 	if _, err := io.CopyN(file, rc, int64(f.UncompressedSize64)); err != nil {
 		return err
