@@ -23,6 +23,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/ulikunitz/xz"
 )
 
 var (
@@ -30,6 +32,7 @@ var (
 	magicGZ   = []byte{0x1f, 0x8b}
 	magicBZIP = []byte{0x42, 0x5a}
 	magicTAR  = []byte{0x75, 0x73, 0x74, 0x61, 0x72} // at offset 257
+	magicXZ   = []byte{0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00}
 )
 
 // Check whether a file has the magic number for tar, gzip, bzip2 or zip files
@@ -37,18 +40,19 @@ var (
 // Note that this function does not advance the Reader.
 //
 // 50 4b 03 04 for pkzip format
-// 1f 8b for .gz
-// 42 5a for bzip
+// 1f 8b for .gz format
+// 42 5a for .bzip format
 // 75 73 74 61 72 at offset 257 for tar files
+// fd 37 7a 58 5a 00 for .xz format
 func magicNumber(reader *bufio.Reader, offset int) (string, error) {
-	headerBytes, err := reader.Peek(offset + 5)
+	headerBytes, err := reader.Peek(offset + 6)
 	if err != nil {
 		return "", err
 	}
 
-	magic := headerBytes[offset : offset+5]
+	magic := headerBytes[offset : offset+6]
 
-	if bytes.Equal(magicTAR, magic) {
+	if bytes.Equal(magicTAR, magic[0:5]) {
 		return "tar", nil
 	}
 
@@ -62,6 +66,10 @@ func magicNumber(reader *bufio.Reader, offset int) (string, error) {
 		return "bzip", nil
 	}
 
+	if bytes.Equal(magicXZ, magic) {
+		return "xz", nil
+	}
+
 	return "", nil
 }
 
@@ -70,6 +78,7 @@ func magicNumber(reader *bufio.Reader, offset int) (string, error) {
 //
 // File formats supported are:
 //   - .tar.gz
+//   - .tar.xz
 //   - .tar.bzip2
 //   - .zip
 //   - .tar
@@ -117,6 +126,11 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+	case "xz":
+		decompressingReader, err = UnxzStream(r)
+		if err != nil {
+			return "", err
+		}
 	case "bzip":
 		decompressingReader, err = Bunzip2Stream(r)
 		if err != nil {
@@ -132,6 +146,9 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 
 	// Check magic number in offset 257 too see if this is also a TAR file
 	ftype, err = magicNumber(decompressingReader, 257)
+	if err != nil {
+		return "", err
+	}
 	if ftype == "tar" {
 		return Untar(decompressingReader, destPath)
 	}
@@ -190,6 +207,28 @@ func GunzipStream(reader io.Reader) (*bufio.Reader, error) {
 	var decompressingReader *gzip.Reader
 	var err error
 	if decompressingReader, err = gzip.NewReader(reader); err != nil {
+		return nil, err
+	}
+
+	return bufio.NewReader(decompressingReader), nil
+}
+
+// Unxz decompresses a xz file and returns the decompressed stream
+func Unxz(file *os.File) (*bufio.Reader, error) {
+	freader := bufio.NewReader(file)
+	xzReader, err := UnxzStream(freader)
+	if err != nil {
+		return nil, err
+	}
+
+	return bufio.NewReader(xzReader), nil
+}
+
+// UnxzStream unpacks a xz stream
+func UnxzStream(reader io.Reader) (*bufio.Reader, error) {
+	var decompressingReader *xz.Reader
+	var err error
+	if decompressingReader, err = xz.NewReader(reader); err != nil {
 		return nil, err
 	}
 
