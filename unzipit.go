@@ -316,6 +316,7 @@ func Untar(data io.Reader, destPath string) (string, error) {
 			if rootdir == destPath {
 				rootdir = fp
 			}
+
 			if err := os.MkdirAll(fp, os.FileMode(hdr.Mode)); err != nil {
 				return rootdir, err
 			}
@@ -349,8 +350,13 @@ func untarFile(hdr *tar.Header, tr *tar.Reader, fp, rootdir string) (string, err
 		}
 	}()
 
-	file.Chmod(os.FileMode(hdr.Mode))
-	os.Chtimes(file.Name(), time.Now(), hdr.ModTime)
+	if err := file.Chmod(os.FileMode(hdr.Mode)); err != nil {
+		log.Printf("warn: failed setting file permissions for %q: %#v", file.Name(), err)
+	}
+
+	if err := os.Chtimes(file.Name(), time.Now(), hdr.ModTime); err != nil {
+		log.Printf("warn: failed setting file atime and mtime for %q: %#v", file.Name(), err)
+	}
 
 	if _, err := io.Copy(file, tr); err != nil {
 		return rootdir, err
