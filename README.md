@@ -1,6 +1,6 @@
 # UnzipIt
 
-[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/c4milo/unzipit?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/c4milo/unzipit?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![GoDoc](https://godoc.org/github.com/c4milo/unzipit?status.svg)](https://godoc.org/github.com/c4milo/unzipit)
 [![Build Status](https://travis-ci.org/c4milo/unzipit.svg?branch=master)](https://travis-ci.org/c4milo/unzipit)
 
