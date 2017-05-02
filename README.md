@@ -12,7 +12,7 @@ This Go library allows you to easily unpack the following files:
 * zip
 * tar
 
-There are not CGO involved nor hard dependencies of any type.
+CGO is not involved nor hard dependencies of any type.
 
 ## Usage
 
