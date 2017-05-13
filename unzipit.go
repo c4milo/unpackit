@@ -98,18 +98,17 @@ func Unpack(file *os.File, destPath string) (string, error) {
 		}
 	}
 
-	// Makes sure despPath exists
+	// Makes sure destPath exists
 	if err := os.MkdirAll(destPath, 0740); err != nil {
 		return "", err
 	}
 
-	r := bufio.NewReader(file)
-	return UnpackStream(r, destPath)
+	return UnpackStream(file, destPath)
 }
 
 // UnpackStream unpacks a compressed stream. Note that if the stream is a using ZIP
-// compression (but only ZIP compression), it's going to get buffered in its entirety
-// to memory prior to decompression.
+// compression (but only ZIP compression), it's going to get buffered all in memory
+// prior to decompression.
 func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	r := bufio.NewReader(reader)
 
@@ -154,7 +153,7 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	}
 
 	// If it's not a TAR archive then save it to disk as is.
-	destRawFile := filepath.Join(destPath, sanitize(path.Base("tarstream")))
+	destRawFile := filepath.Join(destPath, sanitize(path.Base("unknown-pack")))
 
 	// Creates destination file
 	destFile, err := os.Create(destRawFile)
@@ -278,7 +277,12 @@ func unpackZip(zr *zip.Reader, destPath string) (string, error) {
 }
 
 func unzipFile(f *zip.File, destPath string) error {
-	pathSeparator := string(os.PathSeparator)
+	if f.FileInfo().IsDir() {
+		if err := os.MkdirAll(filepath.Join(destPath, f.Name), f.Mode().Perm()); err != nil {
+			return err
+		}
+		return nil
+	}
 
 	rc, err := f.Open()
 	if err != nil {
@@ -291,18 +295,19 @@ func unzipFile(f *zip.File, destPath string) error {
 	}()
 
 	filePath := sanitize(f.Name)
-	sepInd := strings.LastIndex(filePath, pathSeparator)
+	destPath = filepath.Join(destPath, filePath)
 
-	// If the file is a subdirectory, it creates it before attempting to
-	// create the actual file
-	if sepInd > -1 {
-		directory := filePath[0:sepInd]
-		if err := os.MkdirAll(filepath.Join(destPath, directory), 0740); err != nil {
+	// If directories were not included in the archive but are part of the file name,
+	// we create them relative to the destination path.
+	fileDir := filepath.Dir(destPath)
+	_, err = os.Lstat(fileDir)
+	if err != nil {
+		if err := os.MkdirAll(fileDir, 0700); err != nil {
 			return err
 		}
 	}
 
-	file, err := os.Create(filepath.Join(destPath, filePath))
+	file, err := os.Create(destPath)
 	if err != nil {
 		return err
 	}
@@ -421,5 +426,6 @@ func sanitize(name string) string {
 	for strings.HasPrefix(name, "../") {
 		name = name[3:]
 	}
+
 	return name
 }

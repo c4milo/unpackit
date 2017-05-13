@@ -13,39 +13,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"testing"
 
 	"github.com/bradfitz/iter"
+	"github.com/hooklift/assert"
 )
-
-// assert fails the test if the condition is false.
-func assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
-	if !condition {
-		_, file, line, _ := runtime.Caller(1)
-		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
-		tb.FailNow()
-	}
-}
-
-// ok fails the test if an err is not nil.
-func ok(tb testing.TB, err error) {
-	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
-		fmt.Printf("\033[31m%s:%d: unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
-		tb.FailNow()
-	}
-}
-
-// equals fails the test if exp is not equal to act.
-func equals(tb testing.TB, exp, act interface{}) {
-	if !reflect.DeepEqual(exp, act) {
-		_, file, line, _ := runtime.Caller(1)
-		fmt.Printf("\033[31m%s:%d:\n\n\texp: %#v\n\n\tgot: %#v\033[39m\n\n", filepath.Base(file), line, exp, act)
-		tb.FailNow()
-	}
-}
 
 func TestUnpack(t *testing.T) {
 	var tests = []struct {
@@ -61,22 +33,25 @@ func TestUnpack(t *testing.T) {
 		{"./fixtures/cfgdrv.iso", 1},
 		{"./fixtures/test2.tar.gz", 4},
 		{"./fixtures/tar-without-directory-entries.tar.gz", 1},
+		{"./fixtures/testfolder.zip", 3},
 	}
 
 	for _, test := range tests {
-		tempDir, err := ioutil.TempDir(os.TempDir(), "unpackit-tests-"+path.Base(test.filepath)+"-")
-		ok(t, err)
-		defer os.RemoveAll(tempDir)
+		t.Run(test.filepath, func(t *testing.T) {
+			tempDir, err := ioutil.TempDir(os.TempDir(), "unpackit-tests-"+path.Base(test.filepath)+"-")
+			assert.Ok(t, err)
+			defer os.RemoveAll(tempDir)
 
-		file, err := os.Open(test.filepath)
-		ok(t, err)
-		defer file.Close()
+			file, err := os.Open(test.filepath)
+			assert.Ok(t, err)
+			defer file.Close()
 
-		destPath, err := Unpack(file, tempDir)
-		ok(t, err)
+			destPath, err := Unpack(file, tempDir)
+			assert.Ok(t, err)
 
-		length := calcNumberOfFiles(t, destPath)
-		assert(t, length == test.files, fmt.Sprintf("%d != %d for %s", length, test.files, destPath))
+			length := calcNumberOfFiles(t, destPath)
+			assert.Equals(t, test.files, length)
+		})
 	}
 }
 
@@ -96,21 +71,21 @@ func TestUnpackStream(t *testing.T) {
 
 	for _, test := range tests {
 		tempDir, err := ioutil.TempDir(os.TempDir(), "unpackit-tests-"+path.Base(test.filepath)+"-")
-		ok(t, err)
+		assert.Ok(t, err)
 		defer os.RemoveAll(tempDir)
 
 		file, err := os.Open(test.filepath)
-		ok(t, err)
+		assert.Ok(t, err)
 		defer file.Close()
 
 		destPath, err := UnpackStream(bufio.NewReader(file), tempDir)
-		ok(t, err)
+		assert.Ok(t, err)
 
 		finfo, err := ioutil.ReadDir(destPath)
-		ok(t, err)
+		assert.Ok(t, err)
 
 		length := len(finfo)
-		assert(t, length == test.files, fmt.Sprintf("%d != %d for %s", length, test.files, destPath))
+		assert.Equals(t, test.files, length)
 	}
 }
 
@@ -129,13 +104,13 @@ func TestMagicNumber(t *testing.T) {
 
 	for _, test := range tests {
 		file, err := os.Open(test.filepath)
-		ok(t, err)
+		assert.Ok(t, err)
 
 		ftype, err := magicNumber(bufio.NewReader(file), test.offset)
 		file.Close()
-		ok(t, err)
+		assert.Ok(t, err)
 
-		assert(t, ftype == test.ftype, ftype+" != "+test.ftype)
+		assert.Equals(t, test.ftype, ftype)
 	}
 }
 
@@ -160,24 +135,24 @@ func TestUntar(t *testing.T) {
 			Size: int64(len(file.Body)),
 		}
 		err := tw.WriteHeader(hdr)
-		ok(t, err)
+		assert.Ok(t, err)
 
 		_, err = tw.Write([]byte(file.Body))
-		ok(t, err)
+		assert.Ok(t, err)
 	}
 
 	// Make sure to check the error on Close.
 	err := tw.Close()
-	ok(t, err)
+	assert.Ok(t, err)
 
 	// Open the tar archive for reading.
 	r := bytes.NewReader(buf.Bytes())
 	destDir, err := ioutil.TempDir(os.TempDir(), "terraform-vix")
-	ok(t, err)
+	assert.Ok(t, err)
 	defer os.RemoveAll(destDir)
 
 	_, err = Untar(r, destDir)
-	ok(t, err)
+	assert.Ok(t, err)
 }
 
 func TestUntarOpenFileResourceLeak(t *testing.T) {
@@ -207,33 +182,33 @@ func TestUntarOpenFileResourceLeak(t *testing.T) {
 			Size: int64(len(file.Body)),
 		}
 		err := tw.WriteHeader(hdr)
-		ok(t, err)
+		assert.Ok(t, err)
 
 		_, err = tw.Write([]byte(file.Body))
-		ok(t, err)
+		assert.Ok(t, err)
 	}
 
 	// Make sure to check the error on Close.
 	err := tw.Close()
-	ok(t, err)
+	assert.Ok(t, err)
 
 	// Open the tar archive for reading.
 	r := bytes.NewReader(buf.Bytes())
 	destDir, err := ioutil.TempDir(os.TempDir(), "terraform-vix")
-	ok(t, err)
+	assert.Ok(t, err)
 	defer os.RemoveAll(destDir)
 
 	_, err = Untar(r, destDir)
-	ok(t, err)
+	assert.Ok(t, err)
 }
 
 func TestUnzipOpenFileResourceLeak(t *testing.T) {
 	tempPath, err := ioutil.TempDir(os.TempDir(), "unzip-resource-leak-test")
-	ok(t, err)
+	assert.Ok(t, err)
 	defer os.RemoveAll(tempPath)
 
 	testFile, err := os.Create(filepath.Join(tempPath, "test.zip"))
-	ok(t, err)
+	assert.Ok(t, err)
 	defer testFile.Close()
 
 	zw := zip.NewWriter(testFile)
@@ -254,21 +229,21 @@ func TestUnzipOpenFileResourceLeak(t *testing.T) {
 
 	for _, file := range files {
 		f, err := zw.Create(file.Name)
-		ok(t, err)
+		assert.Ok(t, err)
 
 		_, err = f.Write([]byte(file.Body))
-		ok(t, err)
+		assert.Ok(t, err)
 	}
 
 	// Make sure to check the error on Close.
 	err = zw.Close()
-	ok(t, err)
+	assert.Ok(t, err)
 
 	// Open the zip archive for reading.
 	destPath := filepath.Join(tempPath, "out")
 	os.MkdirAll(destPath, 0777)
 	_, err = Unzip(testFile, destPath)
-	ok(t, err)
+	assert.Ok(t, err)
 }
 
 func TestSanitize(t *testing.T) {
@@ -289,8 +264,7 @@ func TestSanitize(t *testing.T) {
 
 	for _, test := range tests {
 		a := sanitize(test.malicious)
-		msg := fmt.Sprintf("%s != %s for malicious string %s", a, test.sanitized, test.malicious)
-		assert(t, a == test.sanitized, msg)
+		assert.Equals(t, test.sanitized, a)
 	}
 }
 
