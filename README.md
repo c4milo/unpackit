@@ -1,10 +1,9 @@
-# UnzipIt
+# UnpackIt
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/c4milo/unzipit?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![GoDoc](https://godoc.org/github.com/c4milo/unzipit?status.svg)](https://godoc.org/github.com/c4milo/unzipit)
-[![Build Status](https://travis-ci.org/c4milo/unzipit.svg?branch=master)](https://travis-ci.org/c4milo/unzipit)
+[![GoDoc](https://godoc.org/github.com/c4milo/unpackit?status.svg)](https://godoc.org/github.com/c4milo/unpackit)
+[![Build Status](https://travis-ci.org/c4milo/unpackit.svg?branch=master)](https://travis-ci.org/c4milo/unpackit)
 
-This Go library allows you to easily unpack the following files:
+This Go library allows you to easily unpack the following files using magic numbers:
 
 * tar.gz
 * tar.bzip2
@@ -12,24 +11,19 @@ This Go library allows you to easily unpack the following files:
 * zip
 * tar
 
-CGO is not involved nor hard dependencies of any type.
-
 ## Usage
 
 Unpack a file:
 
 ```go
-    file, err := os.Open(test.filepath)
-    ok(t, err)
-    defer file.Close()
-
-    destPath, err := unzipit.Unpack(file, tempDir)
+    file, _ := os.Open(test.filepath)
+    destPath, err := unpackit.Unpack(file, tempDir)
 ```
 
 Unpack a stream (such as a http.Response):
 
 ```go
     res, err := http.Get(url)
-    destPath, err := unzipit.UnpackStream(res.Body, tempDir)
+    destPath, err := unpackit.Unpack(res.Body, tempDir)
 ```
 

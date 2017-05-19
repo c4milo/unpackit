@@ -1,7 +1,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-package unzipit
+package unpackit
 
 import (
 	"archive/tar"
@@ -52,40 +52,6 @@ func TestUnpack(t *testing.T) {
 			length := calcNumberOfFiles(t, destPath)
 			assert.Equals(t, test.files, length)
 		})
-	}
-}
-
-func TestUnpackStream(t *testing.T) {
-	var tests = []struct {
-		filepath string
-		files    int
-	}{
-		{"./fixtures/test.tar.bzip2", 2},
-		{"./fixtures/test.tar.gz", 2},
-		{"./fixtures/test.tar.xz", 2},
-		{"./fixtures/test.zip", 2},
-		{"./fixtures/test.tar", 2},
-		{"./fixtures/cfgdrv.iso", 1},
-		{"./fixtures/test2.tar.gz", 4},
-	}
-
-	for _, test := range tests {
-		tempDir, err := ioutil.TempDir(os.TempDir(), "unpackit-tests-"+path.Base(test.filepath)+"-")
-		assert.Ok(t, err)
-		defer os.RemoveAll(tempDir)
-
-		file, err := os.Open(test.filepath)
-		assert.Ok(t, err)
-		defer file.Close()
-
-		destPath, err := UnpackStream(bufio.NewReader(file), tempDir)
-		assert.Ok(t, err)
-
-		finfo, err := ioutil.ReadDir(destPath)
-		assert.Ok(t, err)
-
-		length := len(finfo)
-		assert.Equals(t, test.files, length)
 	}
 }
 

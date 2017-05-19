@@ -2,18 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package unzipit allows you to easily unpack *.tar.gz, *.tar.bzip2, *.tar.xz, *.zip and *.tar files.
+// Package unpackit allows you to easily unpack *.tar.gz, *.tar.bzip2, *.tar.xz, *.zip and *.tar files.
 // There are not CGO involved nor hard dependencies of any type.
-package unzipit
+package unpackit
 
 import (
 	"archive/tar"
 	"archive/zip"
 	"bufio"
 	"bytes"
-	"compress/bzip2"
-	"compress/gzip"
-	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,6 +22,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dsnet/compress/bzip2"
+	gzip "github.com/klauspost/pgzip"
+	"github.com/pkg/errors"
 	"github.com/ulikunitz/xz"
 )
 
@@ -73,23 +74,9 @@ func magicNumber(reader *bufio.Reader, offset int) (string, error) {
 	return "", nil
 }
 
-// Unpack unpacks a compressed and archived file and places result output in destination
-// path.
-//
-// File formats supported are:
-//   - .tar.gz
-//   - .tar.xz
-//   - .tar.bzip2
-//   - .zip
-//   - .tar
-//
-// If it cannot recognize the file format, it will save the file, as is, to the
-// destination path.
-func Unpack(file *os.File, destPath string) (string, error) {
-	if file == nil {
-		return "", errors.New("You must provide a valid file to unpack")
-	}
-
+// Unpack unpacks a compressed stream. Magic numbers are used to determine what
+// decompressor and/or unarchiver to use.
+func Unpack(reader io.Reader, destPath string) (string, error) {
 	var err error
 	if destPath == "" {
 		destPath, err = ioutil.TempDir(os.TempDir(), "unpackit-")
@@ -103,13 +90,6 @@ func Unpack(file *os.File, destPath string) (string, error) {
 		return "", err
 	}
 
-	return UnpackStream(file, destPath)
-}
-
-// UnpackStream unpacks a compressed stream. Note that if the stream is a using ZIP
-// compression (but only ZIP compression), it's going to get buffered all in memory
-// prior to decompression.
-func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	r := bufio.NewReader(reader)
 
 	// Reads magic number from the stream so we can better determine how to proceed
@@ -121,25 +101,44 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	var decompressingReader *bufio.Reader
 	switch ftype {
 	case "gzip":
-		decompressingReader, err = GunzipStream(r)
+		gzr, err := gzip.NewReader(r)
 		if err != nil {
 			return "", err
 		}
+
+		defer func() {
+			if err := gzr.Close(); err != nil {
+				fmt.Printf("%+v", errors.Wrapf(err, "unpackit: failed closing gzip reader"))
+			}
+		}()
+
+		decompressingReader = bufio.NewReader(gzr)
 	case "xz":
-		decompressingReader, err = UnxzStream(r)
+		xzr, err := xz.NewReader(r)
 		if err != nil {
 			return "", err
 		}
+
+		decompressingReader = bufio.NewReader(xzr)
 	case "bzip":
-		decompressingReader, err = Bunzip2Stream(r)
+		br, err := bzip2.NewReader(r, nil)
 		if err != nil {
 			return "", err
 		}
+
+		defer func() {
+			if err := br.Close(); err != nil {
+				fmt.Printf("%+v", errors.Wrapf(err, "unpackit: failed closing bzip2 reader"))
+			}
+		}()
+
+		decompressingReader = bufio.NewReader(br)
 	case "zip":
 		// Like TAR, ZIP is also an archiving format, therefore we can just return
 		// after it finishes
-		return UnzipStream(r, destPath)
+		return Unzip(r, destPath)
 	default:
+		// maybe it is a tarball file
 		decompressingReader = r
 	}
 
@@ -174,91 +173,29 @@ func UnpackStream(reader io.Reader, destPath string) (string, error) {
 	return destPath, nil
 }
 
-// Bunzip2 decompresses a bzip2 file and returns the decompressed stream
-func Bunzip2(file *os.File) (*bufio.Reader, error) {
-	freader := bufio.NewReader(file)
-	bzip2Reader, err := Bunzip2Stream(freader)
-	if err != nil {
-		return nil, err
+// Unzip unpacks a ZIP stream. When given a os.File reader it will get its size without
+// reading the entire zip file in memory.
+func Unzip(r io.Reader, destPath string) (string, error) {
+	var (
+		zr  *zip.Reader
+		err error
+	)
+
+	if f, ok := r.(*os.File); ok {
+		fstat, err := f.Stat()
+		if err != nil {
+			return "", err
+		}
+		zr, err = zip.NewReader(f, fstat.Size())
+	} else {
+		data, err := ioutil.ReadAll(r)
+		if err != nil {
+			return "", err
+		}
+		memReader := bytes.NewReader(data)
+		zr, err = zip.NewReader(memReader, memReader.Size())
 	}
 
-	return bufio.NewReader(bzip2Reader), nil
-}
-
-// Bunzip2Stream unpacks a bzip2 stream
-func Bunzip2Stream(reader io.Reader) (*bufio.Reader, error) {
-	return bufio.NewReader(bzip2.NewReader(reader)), nil
-}
-
-// Gunzip decompresses a gzip file and returns the decompressed stream
-func Gunzip(file *os.File) (*bufio.Reader, error) {
-	freader := bufio.NewReader(file)
-	gunzipReader, err := GunzipStream(freader)
-	if err != nil {
-		return nil, err
-	}
-
-	return bufio.NewReader(gunzipReader), nil
-}
-
-// GunzipStream unpacks a gzipped stream
-func GunzipStream(reader io.Reader) (*bufio.Reader, error) {
-	var decompressingReader *gzip.Reader
-	var err error
-	if decompressingReader, err = gzip.NewReader(reader); err != nil {
-		return nil, err
-	}
-
-	return bufio.NewReader(decompressingReader), nil
-}
-
-// Unxz decompresses a xz file and returns the decompressed stream
-func Unxz(file *os.File) (*bufio.Reader, error) {
-	freader := bufio.NewReader(file)
-	xzReader, err := UnxzStream(freader)
-	if err != nil {
-		return nil, err
-	}
-
-	return bufio.NewReader(xzReader), nil
-}
-
-// UnxzStream unpacks a xz stream
-func UnxzStream(reader io.Reader) (*bufio.Reader, error) {
-	var decompressingReader *xz.Reader
-	var err error
-	if decompressingReader, err = xz.NewReader(reader); err != nil {
-		return nil, err
-	}
-
-	return bufio.NewReader(decompressingReader), nil
-}
-
-// Unzip decompresses and unarchives a ZIP archive, returning the final path or an error
-func Unzip(file *os.File, destPath string) (string, error) {
-	fstat, err := file.Stat()
-	if err != nil {
-		return "", err
-	}
-
-	zr, err := zip.NewReader(file, fstat.Size())
-	if err != nil {
-		return "", err
-	}
-
-	return unpackZip(zr, destPath)
-}
-
-// UnzipStream unpacks a ZIP stream. Because of the nature of the ZIP format,
-// the stream is copied to memory before decompression.
-func UnzipStream(r io.Reader, destPath string) (string, error) {
-	data, err := ioutil.ReadAll(r)
-	if err != nil {
-		return "", err
-	}
-
-	memReader := bytes.NewReader(data)
-	zr, err := zip.NewReader(memReader, int64(len(data)))
 	if err != nil {
 		return "", err
 	}
