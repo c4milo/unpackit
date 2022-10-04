@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,7 +19,7 @@ import (
 )
 
 func TestUnpack(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		filepath string
 		files    int
 	}{
@@ -38,7 +37,7 @@ func TestUnpack(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.filepath, func(t *testing.T) {
-			tempDir, err := ioutil.TempDir(os.TempDir(), "unpackit-tests-"+path.Base(test.filepath)+"-")
+			tempDir, err := os.MkdirTemp(os.TempDir(), "unpackit-tests-"+path.Base(test.filepath)+"-")
 			assert.Ok(t, err)
 			defer os.RemoveAll(tempDir)
 
@@ -46,17 +45,17 @@ func TestUnpack(t *testing.T) {
 			assert.Ok(t, err)
 			defer file.Close()
 
-			destPath, err := Unpack(file, tempDir)
+			err = Unpack(file, tempDir)
 			assert.Ok(t, err)
 
-			length := calcNumberOfFiles(t, destPath)
+			length := calcNumberOfFiles(t, tempDir)
 			assert.Equals(t, test.files, length)
 		})
 	}
 }
 
 func TestMagicNumber(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		filepath string
 		offset   int
 		ftype    string
@@ -88,7 +87,7 @@ func TestUntar(t *testing.T) {
 	tw := tar.NewWriter(buf)
 
 	// Add some files to the archive.
-	var files = []struct {
+	files := []struct {
 		Name, Body string
 	}{
 		{"readme.txt", "This archive contains some text files."},
@@ -113,11 +112,11 @@ func TestUntar(t *testing.T) {
 
 	// Open the tar archive for reading.
 	r := bytes.NewReader(buf.Bytes())
-	destDir, err := ioutil.TempDir(os.TempDir(), "terraform-vix")
+	destDir, err := os.MkdirTemp(os.TempDir(), "terraform-vix")
 	assert.Ok(t, err)
 	defer os.RemoveAll(destDir)
 
-	_, err = Untar(r, destDir)
+	err = Untar(r, destDir)
 	assert.Ok(t, err)
 }
 
@@ -129,7 +128,7 @@ func TestUntarOpenFileResourceLeak(t *testing.T) {
 	tw := tar.NewWriter(buf)
 
 	// Add some files to the archive.
-	var files = make([]struct {
+	files := make([]struct {
 		Name, Body string
 	}, 2000)
 
@@ -160,16 +159,16 @@ func TestUntarOpenFileResourceLeak(t *testing.T) {
 
 	// Open the tar archive for reading.
 	r := bytes.NewReader(buf.Bytes())
-	destDir, err := ioutil.TempDir(os.TempDir(), "terraform-vix")
+	destDir, err := os.MkdirTemp(os.TempDir(), "terraform-vix")
 	assert.Ok(t, err)
 	defer os.RemoveAll(destDir)
 
-	_, err = Untar(r, destDir)
+	err = Untar(r, destDir)
 	assert.Ok(t, err)
 }
 
 func TestUnzipOpenFileResourceLeak(t *testing.T) {
-	tempPath, err := ioutil.TempDir(os.TempDir(), "unzip-resource-leak-test")
+	tempPath, err := os.MkdirTemp(os.TempDir(), "unzip-resource-leak-test")
 	assert.Ok(t, err)
 	defer os.RemoveAll(tempPath)
 
@@ -180,7 +179,7 @@ func TestUnzipOpenFileResourceLeak(t *testing.T) {
 	zw := zip.NewWriter(testFile)
 
 	// Add some files to the archive.
-	var files = make([]struct {
+	files := make([]struct {
 		Name, Body string
 	}, 2000)
 
@@ -207,13 +206,13 @@ func TestUnzipOpenFileResourceLeak(t *testing.T) {
 
 	// Open the zip archive for reading.
 	destPath := filepath.Join(tempPath, "out")
-	os.MkdirAll(destPath, 0777)
-	_, err = Unzip(testFile, destPath)
+	os.MkdirAll(destPath, 0o777)
+	err = Unzip(testFile, destPath)
 	assert.Ok(t, err)
 }
 
 func TestSanitize(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		malicious string
 		sanitized string
 	}{
@@ -243,7 +242,6 @@ func calcNumberOfFiles(t *testing.T, searchDir string) int {
 		}
 		return nil
 	})
-
 	if err != nil {
 		t.FailNow()
 	}
