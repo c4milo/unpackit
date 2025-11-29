@@ -8,7 +8,7 @@ require (
 	github.com/hooklift/assert v0.1.0
 	github.com/klauspost/pgzip v1.2.5
 	github.com/pkg/errors v0.9.1
-	github.com/ulikunitz/xz v0.5.10
+	github.com/ulikunitz/xz v0.5.14
 )
 
 require (
