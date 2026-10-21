@@ -1,6 +1,6 @@
 module github.com/c4milo/unpackit
 
-go 1.18
+go 1.24
 
 require (
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
@@ -11,7 +11,4 @@ require (
 	github.com/ulikunitz/xz v0.5.10
 )
 
-require (
-	github.com/klauspost/compress v1.4.1 // indirect
-	github.com/klauspost/cpuid v1.2.0 // indirect
-)
+require github.com/klauspost/compress v1.18.7 // indirect
